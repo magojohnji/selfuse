@@ -1,0 +1,132 @@
+name: Build NGINX with HTTP/3 (QUIC) support
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Apt Update
+        run: sudo apt update
+
+      - name: Install Dependencies
+        run: sudo apt install -y build-essential ca-certificates zlib1g-dev libpcre3 libpcre3-dev tar unzip libssl-dev wget curl git cmake ninja-build libunwind-dev pkg-config
+
+      - name: Get BoringSSL Latest Commit
+        id: boringssl_commit
+        run: |
+          echo "boringssl-commit=$(git ls-remote https://github.com/google/boringssl.git HEAD | awk '{ print $1 }')" >> $GITHUB_ENV
+
+      - name: Cache BoringSSL
+        id: cache_boringssl
+        uses: actions/cache@v4
+        with:
+          path: boringssl
+          key: ${{ runner.os }}-boringssl-${{ env.boringssl-commit }}
+
+      - name: Get Brotil Latest Commit
+        id: ngx_brotli_commit
+        run: |
+          echo "ngx-brotli-commit=$(git ls-remote https://github.com/google/ngx_brotli.git HEAD | awk '{ print $1 }')" >> $GITHUB_ENV
+
+      - name: Cache Brotil
+        id: cache_ngx_brotli
+        uses: actions/cache@v4
+        with:
+          path: ngx_brotli
+          key: ${{ runner.os }}-ngx_brotli-${{ env.ngx-brotli-commit }}
+
+      - name: Get Nginx Latest Release Tag
+        id: latest_nginx_tag
+        run: |
+          echo "latest-nginx-tag=$(git ls-remote --tags https://github.com/nginx/nginx.git | grep -o 'refs/tags/release-[0-9]*\.[0-9]*\.[0-9]*$' | sort -t '/' -k 3 -V | tail -n1 | sed 's/refs\/tags\///')" >> $GITHUB_ENV
+
+      - name: Cache Nginx
+        id: cache_nginx
+        uses: actions/cache@v4
+        with:
+          path: nginx
+          key: ${{ runner.os }}-nginx-${{ env.latest-nginx-tag }}
+
+      - if: steps.cache_nginx.outputs.cache-hit != 'true'
+        name: Prepare NGINX source
+        run: |
+          git clone --depth=1 --branch ${{ env.latest-nginx-tag }} https://github.com/nginx/nginx.git
+
+      - if: steps.cache_boringssl.outputs.cache-hit != 'true'
+        name: Prepare BoringSSL
+        run: |
+          git clone --depth=1 https://github.com/google/boringssl.git
+          cd boringssl
+          mkdir build
+          cd build
+          cmake -GNinja ..
+          ninja -j $(nproc)
+          cd ../..
+
+      - if: steps.cache_ngx_brotli.outputs.cache-hit != 'true'
+        name: Prepare Brotil
+        run: |
+          git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
+          cd ngx_brotli/deps/brotli
+          mkdir out && cd out
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_INSTALL_PREFIX=./installed ..
+          cmake --build . --config Release --target brotlienc
+          cd ../../../..
+
+      - if: steps.cache_nginx.outputs.cache-hit != 'true' || steps.cache_boringssl.outputs.cache-hit != 'true' || steps.cache_ngx_brotli.outputs.cache-hit != 'true'
+        name: Make Nginx
+        run: |
+          cd nginx
+          ./auto/configure \
+            --user=nginx \
+            --group=nginx \
+            --with-pcre  \
+            --add-module=../ngx_brotli \
+            --with-http_v2_module \
+            --with-stream \
+            --with-stream_ssl_module \
+            --with-http_ssl_module \
+            --with-http_gzip_static_module \
+            --with-http_gunzip_module \
+            --with-http_sub_module \
+            --with-http_flv_module \
+            --with-http_addition_module \
+            --with-http_realip_module \
+            --with-http_mp4_module \
+            --with-ld-opt=-Wl,-E \
+            --with-cc-opt=-Wno-error \
+            --with-ld-opt=-ljemalloc \
+            --with-http_dav_module \
+            --with-http_v3_module \
+            --with-cc=c++ \
+            --with-cc-opt="-I../boringssl/include -x c" \
+            --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto"
+          make -j $(nproc)
+
+      - name: Generate Release Name
+        run: |
+          release_name="nginx-${{ env.latest-nginx-tag }}-$(date +'%Y.%m.%d')"
+          release_file_name="${release_name}-linux-amd64"
+          echo "release-name=${release_name}" >> $GITHUB_ENV
+          echo "release-file-name=${release_file_name}" >> $GITHUB_ENV
+          cp nginx/objs/nginx $release_file_name
+
+      - if: steps.cache_nginx.outputs.cache-hit != 'true' || steps.cache_boringssl.outputs.cache-hit != 'true' || steps.cache_ngx_brotli.outputs.cache-hit != 'true'
+        name: Release Post
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.release-file-name }}
+          name: ${{ env.release-name }}
+          tag_name: ${{ env.release-name }}
+          token: ${{ secrets.GH_TOKEN }}
