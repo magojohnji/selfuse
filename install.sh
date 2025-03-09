@@ -39,19 +39,11 @@ fi
 # Function to install NGINX
 install_nginx() {
   # Create installation directories
-  mkdir -p $PREFIX/sbin $PREFIX/conf $PREFIX/logs $PREFIX/html $PREFIX/temp $PREFIX/conf/sites-enabled $PREFIX/conf/sites-available $PREFIX/conf/conf.d $PREFIX/lib
+  mkdir -p $PREFIX/sbin $PREFIX/conf $PREFIX/logs $PREFIX/html $PREFIX/temp $PREFIX/conf/sites-enabled $PREFIX/conf/sites-available $PREFIX/conf/conf.d
 
-  # Download the latest release package from GitHub releases
+  # Download the latest nginx executable from GitHub releases
   LATEST_RELEASE=$(curl -s https://api.github.com/repos/zhongwwwhhh/nginx-http3-boringssl/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3)}')
-  wget https://github.com/zhongwwwhhh/nginx-http3-boringssl/releases/download/$LATEST_RELEASE/$LATEST_RELEASE-linux-amd64.tar.gz -O /tmp/$LATEST_RELEASE-linux-amd64.tar.gz
-
-  # Extract the release package
-  tar -xzvf /tmp/$LATEST_RELEASE-linux-amd64.tar.gz -C /tmp
-
-  # Move the files to the installation directory
-  mv /tmp/release_package/nginx $SBIN_PATH
-  mv /tmp/release_package/libssl.a $PREFIX/lib/
-  mv /tmp/release_package/libcrypto.a $PREFIX/lib/
+  wget https://github.com/zhongwwwhhh/nginx-http3-boringssl/releases/download/$LATEST_RELEASE/$LATEST_RELEASE-linux-amd64 -O $SBIN_PATH
 
   # Grant execution permissions
   chmod +x $SBIN_PATH
@@ -71,10 +63,6 @@ install_nginx() {
 
   # Create a symbolic link for nginx
   ln -s $SBIN_PATH /usr/local/bin/nginx
-
-  # Configure runtime library path
-  echo "$PREFIX/lib" | sudo tee /etc/ld.so.conf.d/nginx.conf
-  sudo ldconfig
 
   # Notify installation completion
   echo "NGINX has been successfully installed to $SBIN_PATH"
@@ -147,10 +135,6 @@ uninstall_nginx() {
 
   # Remove symbolic link for nginx
   rm /usr/local/bin/nginx || echo "Failed to remove symbolic link for nginx. It may not exist."
-
-  # Remove runtime library path configuration
-  rm /etc/ld.so.conf.d/nginx.conf || echo "Failed to remove runtime library path configuration. It may not exist."
-  sudo ldconfig
 
   echo "NGINX has been successfully uninstalled."
 }
