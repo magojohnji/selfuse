@@ -75,6 +75,8 @@ jobs:
           cmake -GNinja ..
           ninja -j $(nproc)
           cd ../..
+          ls boringssl/build/ssl
+          ls boringssl/build/crypto
 
       - if: steps.cache_ngx_brotli.outputs.cache-hit != 'true'
         name: Prepare Brotil
@@ -96,23 +98,17 @@ jobs:
             --with-pcre  \
             --add-module=../ngx_brotli \
             --with-http_v2_module \
-            --with-stream \
-            --with-stream_ssl_module \
             --with-http_ssl_module \
-            --with-http_gzip_static_module \
             --with-http_gunzip_module \
             --with-http_sub_module \
-            --with-http_flv_module \
             --with-http_addition_module \
             --with-http_realip_module \
             --with-http_mp4_module \
             --with-ld-opt=-Wl,-E \
-            --with-cc-opt=-Wno-error \
-            --with-http_dav_module \
             --with-http_v3_module \
             --with-cc=c++ \
             --with-cc-opt="-I../boringssl/include -x c" \
-            --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto -static"
+            --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto"
           make -j $(nproc)
 
       - name: Generate Release Name
