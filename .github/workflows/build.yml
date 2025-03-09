@@ -124,11 +124,20 @@ jobs:
           echo "release-file-name=${release_file_name}" >> $GITHUB_ENV
           cp nginx/objs/nginx $release_file_name
 
+      - name: Package Nginx and BoringSSL
+        run: |
+          mkdir -p release_package
+          cp nginx/objs/nginx release_package/
+          cp -r boringssl/include/openssl release_package/boringssl_include
+          cp boringssl/build/ssl/libssl.a release_package/
+          cp boringssl/build/crypto/libcrypto.a release_package/
+          tar -czvf ${{ env.release-file-name }}.tar.gz -C release_package .
+
       - if: steps.cache_nginx.outputs.cache-hit != 'true' || steps.cache_boringssl.outputs.cache-hit != 'true' || steps.cache_ngx_brotli.outputs.cache-hit != 'true'
         name: Release Post
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.release-file-name }}
+          files: ${{ env.release-file-name }}.tar.gz
           name: ${{ env.release-name }}
           tag_name: ${{ env.release-name }}
           token: ${{ secrets.GH_TOKEN }}
