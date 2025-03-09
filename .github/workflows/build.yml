@@ -96,6 +96,8 @@ jobs:
             --user=nginx \
             --group=nginx \
             --with-pcre  \
+            --with-threads \
+            --with-file-aio \
             --add-module=../ngx_brotli \
             --with-http_v2_module \
             --with-http_ssl_module \
@@ -107,7 +109,7 @@ jobs:
             --with-ld-opt=-Wl,-E \
             --with-http_v3_module \
             --with-cc=c++ \
-            --with-cc-opt="-I../boringssl/include -x c" \
+            --with-cc-opt="-I../boringssl/include -x c -O3 -fstack-protector-strong -Wformat -fPIC" \
             --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto"
           make -j $(nproc)
 
