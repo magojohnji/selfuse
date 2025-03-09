@@ -64,10 +64,12 @@ jobs:
         name: Prepare NGINX source
         run: |
           git clone --depth=1 --branch ${{ env.latest-nginx-tag }} https://github.com/nginx/nginx.git
+          cd nginx
           git remote add yaroslavros https://github.com/yaroslavros/nginx.git
           git fetch yaroslavros
           git cherry-pick -X theirs e80a62cb7736ce47b3e54db77c52965baa23b1f5
           git cherry-pick ff863a777a08436ee988299471fb9ac3ae5c07cc
+          cd ..
 
       - if: steps.cache_boringssl.outputs.cache-hit != 'true'
         name: Prepare BoringSSL
