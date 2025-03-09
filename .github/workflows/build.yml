@@ -65,6 +65,8 @@ jobs:
         run: |
           git clone --depth=1 --branch ${{ env.latest-nginx-tag }} https://github.com/nginx/nginx.git
           cd nginx
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           git remote add yaroslavros https://github.com/yaroslavros/nginx.git
           git fetch yaroslavros
           git cherry-pick -X theirs e80a62cb7736ce47b3e54db77c52965baa23b1f5
