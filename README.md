@@ -8,16 +8,27 @@ This repository contains the build configuration for compiling NGINX with Boring
 - http_v2_module
 - http_v3_module
 - http_ssl_module
-- http_gzip_static_module
 - http_gunzip_module
 - http_sub_module
 - http_addition_module
 - http_realip_module
-- http_flv_module
 - http_mp4_module
-- http_dav_module
-- stream
-- stream_ssl_module
+
+## Install
+
+Run the installation script:
+
+```sh
+sudo ./install.sh install
+```
+
+After installation, start the NGINX service:
+
+```sh
+sudo systemctl start nginx
+```
+
+The configuration file is located at `/usr/local/nginx/conf/nginx.conf`, and you can modify it as needed.
 
 ## Warning
 
