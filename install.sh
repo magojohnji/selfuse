@@ -39,7 +39,7 @@ fi
 # Function to install NGINX
 install_nginx() {
   # Create installation directories
-  mkdir -p $PREFIX/sbin $PREFIX/conf $PREFIX/logs $PREFIX/html $PREFIX/temp
+  mkdir -p $PREFIX/sbin $PREFIX/conf $PREFIX/logs $PREFIX/html $PREFIX/temp $PREFIX/conf/sites-enabled $PREFIX/conf/sites-available $PREFIX/conf/conf.d
 
   # Download the latest nginx executable from GitHub releases
   LATEST_RELEASE=$(curl -s https://api.github.com/repos/zhongwwwhhh/nginx-http3-boringssl/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3)}')
@@ -55,13 +55,11 @@ install_nginx() {
 
   # Set directory permissions
   chown -R nginx:nginx $PREFIX
+  chown -R nginx:nginx $PREFIX/conf/sites-enabled $PREFIX/conf/sites-available $PREFIX/conf/conf.d
 
   # Download the default nginx configuration files
-  wget https://raw.githubusercontent.com/nginx/nginx/master/conf/nginx.conf -O $CONF_PATH/nginx.conf
+  wget https://raw.githubusercontent.com/zhongwwwhhh/nginx-http3-boringssl/master/conf/nginx.conf -O $CONF_PATH/nginx.conf
   wget https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types -O $CONF_PATH/mime.types
-
-  # Modify nginx.conf to run worker processes as nginx user
-  sed -i 's/#user  nobody;/user  nginx;/' $CONF_PATH/nginx.conf
 
   # Create a symbolic link for nginx
   ln -s $SBIN_PATH /usr/local/bin/nginx
