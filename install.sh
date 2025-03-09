@@ -24,9 +24,11 @@ fi
 PREFIX="/usr/local/nginx"
 SBIN_PATH="$PREFIX/sbin/nginx"
 CONF_PATH="$PREFIX/conf"
-ERROR_LOG_PATH="$PREFIX/logs/error.log"
-PID_PATH="$PREFIX/logs/nginx.pid"
-LOCK_PATH="$PREFIX/logs/nginx.lock"
+LOG_PATH="$PREFIX/logs"
+ERROR_LOG_PATH="$LOG_PATH/error.log"
+ACCESS_LOG_PATH="$LOG_PATH/access.log"
+PID_PATH="$LOG_PATH/nginx.pid"
+LOCK_PATH="$LOG_PATH/nginx.lock"
 
 # Check if the script is run with sufficient privileges
 if [ "$EUID" -ne 0 ]; then
@@ -61,8 +63,12 @@ install_nginx() {
   # Modify nginx.conf to run worker processes as nginx user
   sed -i 's/#user  nobody;/user  nginx;/' $CONF_PATH/nginx.conf
 
+  # Create a symbolic link for nginx
+  ln -s $SBIN_PATH /usr/local/bin/nginx
+
   # Notify installation completion
   echo "NGINX has been successfully installed to $SBIN_PATH"
+  echo "Please run 'source /etc/profile' to update your environment variables."
 
   # Create systemd service file
   cat <<EOF > /etc/systemd/system/nginx.service
@@ -93,23 +99,44 @@ EOF
   systemctl start nginx
 
   echo "NGINX service has been successfully created and started."
+
+  # Create logrotate configuration for nginx
+  cat <<EOF > /etc/logrotate.d/nginx
+$ERROR_LOG_PATH $ACCESS_LOG_PATH {
+    daily
+    rotate 90
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        [ -f $PID_PATH ] && kill -USR1 \`cat $PID_PATH\`
+    endscript
+}
+EOF
 }
 
 # Function to uninstall NGINX
 uninstall_nginx() {
   # Stop and disable nginx service
-  systemctl stop nginx
-  systemctl disable nginx
+  systemctl stop nginx || echo "Failed to stop nginx service. It may not be running."
+  systemctl disable nginx || echo "Failed to disable nginx service. It may not be enabled."
 
   # Remove systemd service file
-  rm /etc/systemd/system/nginx.service
+  rm /etc/systemd/system/nginx.service || echo "Failed to remove nginx service file. It may not exist."
   systemctl daemon-reload
 
+  # Remove logrotate configuration for nginx
+  rm /etc/logrotate.d/nginx || echo "Failed to remove logrotate configuration. It may not exist."
+
   # Remove nginx user and group
-  userdel -r nginx
+  userdel -r nginx || echo "Failed to remove nginx user and group. They may not exist."
 
   # Remove installation directories
-  rm -rf $PREFIX
+  rm -rf $PREFIX || echo "Failed to remove installation directories. They may not exist."
+
+  # Remove symbolic link for nginx
+  rm /usr/local/bin/nginx || echo "Failed to remove symbolic link for nginx. It may not exist."
 
   echo "NGINX has been successfully uninstalled."
 }
