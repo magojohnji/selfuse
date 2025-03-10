@@ -51,8 +51,7 @@ jobs:
       - name: Get Nginx Latest Release Tag
         id: latest_nginx_tag
         run: |
-          latest-nginx-tag=$(curl -s https://raw.githubusercontent.com/ZhongWwwHhh/fork-nginx-ech/ech-boringssl/src/core/nginx.h | grep '#define NGINX_VERSION' | awk '{print $3}' | tr -d '"')
-          echo "latest-nginx-tag=${latest-nginx-tag}" >> $GITHUB_ENV
+          echo "latest-nginx-tag=$(curl -s https://raw.githubusercontent.com/ZhongWwwHhh/fork-nginx-ech/ech-boringssl/src/core/nginx.h | grep '#define NGINX_VERSION' | awk '{print $3}' | tr -d '"')" >> $GITHUB_ENV
 
       - name: Cache Nginx
         id: cache_nginx
