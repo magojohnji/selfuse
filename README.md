@@ -13,6 +13,13 @@ This repository contains the build configuration for compiling NGINX with Boring
 - http_addition_module
 - http_realip_module
 - http_mp4_module
+- http_auth_request_module
+- http_dav_module
+- http_flv_module
+- http_gzip_static_module
+- http_random_index_module
+- http_secure_link_module
+- http_slice_module
 
 ## Install
 
@@ -29,6 +36,12 @@ sudo systemctl start nginx
 ```
 
 The configuration file is located at `/usr/local/nginx/conf/nginx.conf`, and you can modify it as needed.
+
+## Default Locations and User
+
+The default configuration file is located at `/usr/local/nginx/conf/nginx.conf`.
+
+The default user and group for running NGINX are `nginx`.
 
 ## Warning
 
