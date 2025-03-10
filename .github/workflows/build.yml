@@ -63,7 +63,7 @@ jobs:
       - if: steps.cache_nginx.outputs.cache-hit != 'true'
         name: Prepare NGINX source
         run: |
-          git clone --depth=1 --branch ech-boringssl https://github.com/ZhongWwwHhh/fork-nginx-ech.git
+          git clone --depth=1 --branch ech-boringssl https://github.com/ZhongWwwHhh/fork-nginx-ech.git ./nginx
 
       - if: steps.cache_boringssl.outputs.cache-hit != 'true'
         name: Prepare BoringSSL
