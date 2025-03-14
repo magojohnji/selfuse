@@ -72,7 +72,9 @@ jobs:
           cd boringssl
           mkdir build
           cd build
-          cmake -GNinja ..
+          cmake -GNinja .. \
+            -DCMAKE_C_FLAGS="-march=x86-64-v2 -mtune=generic -O3 -pipe -fomit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-march=x86-64-v2 -mtune=generic -O3 -pipe -fomit-frame-pointer" ..
           ninja -j $(nproc)
           cd ../..
           ls boringssl/build/ssl
@@ -84,7 +86,7 @@ jobs:
           git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
           cd ngx_brotli/deps/brotli
           mkdir out && cd out
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_INSTALL_PREFIX=./installed ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -march=x86-64-v2 -mtune=generic -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="-Ofast -march=x86-64-v2 -mtune=generic -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_INSTALL_PREFIX=./installed ..
           cmake --build . --config Release --target brotlienc
           cd ../../../..
 
@@ -96,7 +98,7 @@ jobs:
             --user=nginx \
             --group=nginx \
             --with-compat \
-            --with-pcre-jit  \
+            --with-pcre-jit \
             --with-threads \
             --with-file-aio \
             --add-module=../ngx_brotli \
@@ -117,7 +119,7 @@ jobs:
             --with-ld-opt=-Wl,-E \
             --with-http_v3_module \
             --with-cc=c++ \
-            --with-cc-opt="-I../boringssl/include -x c -O2 -fstack-protector-strong -Wformat -fPIC -g -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -flto=auto -ffat-lto-objects -fstack-clash-protection -Werror=format-security -fcf-protection -Wdate-time -D_FORTIFY_SOURCE=3" \
+            --with-cc-opt="-march=x86-64-v2 -mtune=generic -I../boringssl/include -x c -O3 -fstack-protector-strong -Wformat -fPIC -g -fno-omit-frame-pointer -flto=auto -ffat-lto-objects -fstack-clash-protection -Werror=format-security -fcf-protection -Wdate-time -D_FORTIFY_SOURCE=3" \
             --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now" \
             --prefix=/usr/share/nginx \
             --conf-path=/etc/nginx/nginx.conf \
