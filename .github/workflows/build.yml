@@ -95,7 +95,8 @@ jobs:
           ./auto/configure \
             --user=nginx \
             --group=nginx \
-            --with-pcre  \
+            --with-compat \
+            --with-pcre-jit  \
             --with-threads \
             --with-file-aio \
             --add-module=../ngx_brotli \
@@ -116,8 +117,20 @@ jobs:
             --with-ld-opt=-Wl,-E \
             --with-http_v3_module \
             --with-cc=c++ \
-            --with-cc-opt="-I../boringssl/include -x c -O3 -fstack-protector-strong -Wformat -fPIC" \
-            --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto"
+            --with-cc-opt="-I../boringssl/include -x c -O2 -fstack-protector-strong -Wformat -fPIC -g -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -flto=auto -ffat-lto-objects -fstack-clash-protection -Werror=format-security -fcf-protection -Wdate-time -D_FORTIFY_SOURCE=3" \
+            --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now" \
+            --prefix=/usr/share/nginx \
+            --conf-path=/etc/nginx/nginx.conf \
+            --http-log-path=/var/log/nginx/access.log \
+            --error-log-path=/var/log/nginx/error.log \
+            --lock-path=/var/lock/nginx.lock \
+            --pid-path=/run/nginx.pid \
+            --modules-path=/usr/lib/nginx/modules \
+            --http-client-body-temp-path=/var/lib/nginx/body \
+            --http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
+            --http-proxy-temp-path=/var/lib/nginx/proxy \
+            --http-scgi-temp-path=/var/lib/nginx/scgi \
+            --http-uwsgi-temp-path=/var/lib/nginx/uwsgi
           make -j $(nproc)
 
       - name: Generate Release Name

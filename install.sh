@@ -21,14 +21,21 @@ if ! command -v systemctl &> /dev/null; then
 fi
 
 # Installation path
-PREFIX="/usr/local/nginx"
-SBIN_PATH="$PREFIX/sbin/nginx"
-CONF_PATH="$PREFIX/conf"
-LOG_PATH="$PREFIX/logs"
+PREFIX="/usr/share/nginx"
+SBIN_PATH="/usr/sbin/nginx"
+CONF_PATH="/etc/nginx"
+LOG_PATH="/var/log/nginx"
 ERROR_LOG_PATH="$LOG_PATH/error.log"
 ACCESS_LOG_PATH="$LOG_PATH/access.log"
-PID_PATH="$LOG_PATH/nginx.pid"
-LOCK_PATH="$LOG_PATH/nginx.lock"
+PID_PATH="/run/nginx.pid"
+LOCK_PATH="/var/lock/nginx.lock"
+MODULES_PATH="/usr/lib/nginx/modules"
+CLIENT_BODY_TEMP_PATH="/var/lib/nginx/body"
+FASTCGI_TEMP_PATH="/var/lib/nginx/fastcgi"
+PROXY_TEMP_PATH="/var/lib/nginx/proxy"
+SCGI_TEMP_PATH="/var/lib/nginx/scgi"
+UWSGI_TEMP_PATH="/var/lib/nginx/uwsgi"
+CACHE_PATH="/var/cache/nginx"
 
 # Check if the script is run with sufficient privileges
 if [ "$EUID" -ne 0 ]; then
@@ -39,11 +46,11 @@ fi
 # Function to install NGINX
 install_nginx() {
   # Create installation directories
-  mkdir -p $PREFIX/sbin $PREFIX/conf $PREFIX/logs $PREFIX/html $PREFIX/temp $PREFIX/conf/sites-enabled $PREFIX/conf/sites-available $PREFIX/conf/conf.d
+  mkdir -p $PREFIX $CONF_PATH $LOG_PATH $PREFIX/html $CONF_PATH/sites-enabled $CONF_PATH/sites-available $CONF_PATH/conf.d $MODULES_PATH $CLIENT_BODY_TEMP_PATH $FASTCGI_TEMP_PATH $PROXY_TEMP_PATH $SCGI_TEMP_PATH $UWSGI_TEMP_PATH $CACHE_PATH
 
   # Download the latest nginx executable from GitHub releases
   LATEST_RELEASE=$(curl -s https://api.github.com/repos/zhongwwwhhh/nginx-http3-boringssl/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3)}')
-  wget https://github.com/zhongwwwhhh/nginx-http3-boringssl/releases/download/$LATEST_RELEASE/$LATEST_RELEASE-linux-amd64 -O $SBIN_PATH
+  wget https://github.com/zhongwwwhhh/nginx-http3-boringssl/releases/download/$LATEST_RELEASE/$LATEST_RELEASE-linux-amd64 -O $SBIN_PATH || { echo "Failed to download nginx executable"; exit 1; }
 
   # Grant execution permissions
   chmod +x $SBIN_PATH
@@ -55,33 +62,32 @@ install_nginx() {
 
   # Set directory permissions
   chown -R nginx:nginx $PREFIX
-  chown -R nginx:nginx $PREFIX/conf/sites-enabled $PREFIX/conf/sites-available $PREFIX/conf/conf.d
+  chown -R nginx:nginx $CONF_PATH/sites-enabled $CONF_PATH/sites-available $CONF_PATH/conf.d $MODULES_PATH $CLIENT_BODY_TEMP_PATH $FASTCGI_TEMP_PATH $PROXY_TEMP_PATH $SCGI_TEMP_PATH $UWSGI_TEMP_PATH $CACHE_PATH
+  chmod 700 $CLIENT_BODY_TEMP_PATH $FASTCGI_TEMP_PATH $PROXY_TEMP_PATH $SCGI_TEMP_PATH $UWSGI_TEMP_PATH $CACHE_PATH
 
   # Download the default nginx configuration files
-  wget https://raw.githubusercontent.com/zhongwwwhhh/nginx-http3-boringssl/master/conf/nginx.conf -O $CONF_PATH/nginx.conf
-  wget https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types -O $CONF_PATH/mime.types
-
-  # Create a symbolic link for nginx
-  ln -s $SBIN_PATH /usr/local/bin/nginx
+  wget https://raw.githubusercontent.com/zhongwwwhhh/nginx-http3-boringssl/master/conf/nginx.conf -O $CONF_PATH/nginx.conf || { echo "Failed to download nginx.conf"; exit 1; }
+  wget https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types -O $CONF_PATH/mime.types || { echo "Failed to download mime.types"; exit 1; }
 
   # Notify installation completion
   echo "NGINX has been successfully installed to $SBIN_PATH"
-  echo "Please run 'source /etc/profile' to update your environment variables."
 
   # Create systemd service file
   cat <<EOF > /etc/systemd/system/nginx.service
 [Unit]
-Description=The NGINX HTTP and reverse proxy server
-After=network.target
+Description=A high performance web server and a reverse proxy server
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=forking
 PIDFile=$PID_PATH
-ExecStartPre=$SBIN_PATH -t
-ExecStart=$SBIN_PATH
-ExecReload=/bin/kill -s HUP \$MAINPID
-ExecStop=/bin/kill -s QUIT \$MAINPID
-PrivateTmp=true
+ExecStartPre=$SBIN_PATH -t -q -g 'daemon on; master_process on;'
+ExecStart=$SBIN_PATH -g 'daemon on; master_process on;'
+ExecReload=$SBIN_PATH -g 'daemon on; master_process on;' -s reload
+ExecStop=-/sbin/start-stop-daemon --quiet --stop --retry QUIT/5 --pidfile $PID_PATH
+TimeoutStopSec=5
+KillMode=mixed
 User=root
 Group=root
 
@@ -130,11 +136,8 @@ uninstall_nginx() {
   # Remove nginx user and group
   userdel -r nginx || echo "Failed to remove nginx user and group. They may not exist."
 
-  # Remove installation directories
-  rm -rf $PREFIX || echo "Failed to remove installation directories. They may not exist."
-
-  # Remove symbolic link for nginx
-  rm /usr/local/bin/nginx || echo "Failed to remove symbolic link for nginx. It may not exist."
+  # Remove files
+  rm -rf $PREFIX $SBIN_PATH $CONF_PATH $MODULES_PATH $CLIENT_BODY_TEMP_PATH $FASTCGI_TEMP_PATH $PROXY_TEMP_PATH $SCGI_TEMP_PATH $UWSGI_TEMP_PATH $CACHE_PATH || echo "Failed to remove files. They may not exist."
 
   echo "NGINX has been successfully uninstalled."
 }
