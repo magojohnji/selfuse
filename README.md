@@ -35,13 +35,22 @@ After installation, start the NGINX service:
 sudo systemctl start nginx
 ```
 
-The configuration file is located at `/usr/local/nginx/conf/nginx.conf`, and you can modify it as needed.
-
 ## Default Locations and User
 
-The default configuration file is located at `/usr/local/nginx/conf/nginx.conf`.
-
-The default user and group for running NGINX are `nginx`.
+```sh
+--prefix=/usr/share/nginx 
+--conf-path=/etc/nginx/nginx.conf 
+--http-log-path=/var/log/nginx/access.log 
+--error-log-path=/var/log/nginx/error.log 
+--lock-path=/var/lock/nginx.lock 
+--pid-path=/run/nginx.pid 
+--modules-path=/usr/lib/nginx/modules 
+--http-client-body-temp-path=/var/lib/nginx/body 
+--http-fastcgi-temp-path=/var/lib/nginx/fastcgi 
+--http-proxy-temp-path=/var/lib/nginx/proxy 
+--http-scgi-temp-path=/var/lib/nginx/scgi 
+--http-uwsgi-temp-path=/var/lib/nginx/uwsgi
+```
 
 ## Encrypted Client Hello (ECH)
 
@@ -70,20 +79,28 @@ It is possible to have multiple `ssl_ech` configurations in a given server block
 
 The only KEM supported for ECH in BoringSSL is X25519, HKDF-SHA256, so X25519 key is required. To generate one with OpenSSL run
 
-    openssl genpkey -out ech.key -algorithm X25519
+```sh
+openssl genpkey -out ech.key -algorithm X25519
+```
 
 #### Populating DNS records
 
 After parsing configuration Nginx will dump encoded ECHConfigList into error_log similarly to
 
-    server ech.example.com ECH config for HTTPS DNS record ech="AEX+DQBB8QAgACBl2nj6LhmbUqJJseiydASRUkdmEQGq/u/e5fXDLsFJSAAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA="
+```sh
+server ech.example.com ECH config for HTTPS DNS record ech="AEX+DQBB8QAgACBl2nj6LhmbUqJJseiydASRUkdmEQGq/u/e5fXDLsFJSAAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA="
+```
+
 For ECH to work this encoded configuration needs to be added to HTTPS record. Typical HTTPS record looks like this:
 
-    kdig +short crypto.cloudflare.com https
-    1 . alpn=http/1.1,h2 ipv4hint=162.159.137.85,162.159.138.85 ech=AEX+DQBB8QAgACBl2nj6LhmbUqJJseiydASRUkdmEQGq/u/e5fXDLsFJSAAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA= ipv6hint=2606:4700:7::a29f:8955,2606:4700:7::a29f:8a55
+```sh
+kdig +short crypto.cloudflare.com https
+1 . alpn=http/1.1,h2 ipv4hint=162.159.137.85,162.159.138.85 ech=AEX+DQBB8QAgACBl2nj6LhmbUqJJseiydASRUkdmEQGq/u/e5fXDLsFJSAAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA= ipv6hint=2606:4700:7::a29f:8955,2606:4700:7::a29f:8a55
+```
+
 For ECH operation only `ech` is required, other attributes are optional.
 
-</details>  
+</details>
 
 ## Warning
 
