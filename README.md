@@ -26,7 +26,7 @@ This repository contains the build configuration for compiling NGINX with Boring
 Run the installation script:
 
 ```sh
-sudo ./install.sh install
+bash -c "$(curl -L https://raw.githubusercontent.com/ZhongWwwHhh/nginx-http3-boringssl/main/install.sh)" @ install
 ```
 
 After installation, start the NGINX service:

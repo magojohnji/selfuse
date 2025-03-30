@@ -45,6 +45,19 @@ fi
 
 # Function to install NGINX
 install_nginx() {
+  # Check if NGINX is already installed
+  if command -v nginx &> /dev/null; then
+    echo "NGINX is already installed. Please uninstall it first if you want to reinstall."
+    exit 1
+  fi
+
+  # Confirm installation
+  read -p "Are you sure you want to install NGINX? (y/N): " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Installation cancelled."
+    exit 0
+  fi
+
   # Create installation directories
   mkdir -p $PREFIX $CONF_PATH $LOG_PATH $PREFIX/html $CONF_PATH/sites-enabled $CONF_PATH/sites-available $CONF_PATH/conf.d $MODULES_PATH $CLIENT_BODY_TEMP_PATH $FASTCGI_TEMP_PATH $PROXY_TEMP_PATH $SCGI_TEMP_PATH $UWSGI_TEMP_PATH $CACHE_PATH
 
@@ -122,6 +135,13 @@ EOF
 
 # Function to uninstall NGINX
 uninstall_nginx() {
+  # Confirm uninstallation
+  read -p "Are you sure you want to uninstall NGINX? (y/N): " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Uninstallation cancelled."
+    exit 0
+  fi
+
   # Stop and disable nginx service
   systemctl stop nginx || echo "Failed to stop nginx service. It may not be running."
   systemctl disable nginx || echo "Failed to disable nginx service. It may not be enabled."
@@ -142,9 +162,40 @@ uninstall_nginx() {
   echo "NGINX has been successfully uninstalled."
 }
 
+# Function to update NGINX
+update_nginx() {
+  # Check if NGINX is installed
+  if ! command -v nginx &> /dev/null; then
+    echo "NGINX is not installed. Please install it first before updating."
+    exit 1
+  fi
+
+  # Confirm update
+  read -p "Are you sure you want to update NGINX? (y/N): " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Update cancelled."
+    exit 0
+  fi
+
+  # Stop NGINX service
+  systemctl stop nginx || { echo "Failed to stop NGINX service. Please check its status."; exit 1; }
+
+  # Download the latest nginx executable from GitHub releases
+  LATEST_RELEASE=$(curl -s https://api.github.com/repos/zhongwwwhhh/nginx-http3-boringssl/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3)}')
+  wget https://github.com/zhongwwwhhh/nginx-http3-boringssl/releases/download/$LATEST_RELEASE/$LATEST_RELEASE-linux-amd64 -O $SBIN_PATH || { echo "Failed to download nginx executable"; exit 1; }
+
+  # Grant execution permissions
+  chmod +x $SBIN_PATH
+
+  # Start NGINX service
+  systemctl start nginx || { echo "Failed to start NGINX service. Please check its status."; exit 1; }
+
+  echo "NGINX has been successfully updated to the latest version."
+}
+
 # Check command line arguments
 if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 {install|uninstall}"
+  echo "Usage: $0 {install|uninstall|update}"
   exit 1
 fi
 
@@ -155,8 +206,11 @@ case "$1" in
   uninstall)
     uninstall_nginx
     ;;
+  update)
+    update_nginx
+    ;;
   *)
-    echo "Usage: $0 {install|uninstall}"
+    echo "Usage: $0 {install|uninstall|update}"
     exit 1
     ;;
 esac
