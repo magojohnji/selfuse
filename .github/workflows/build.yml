@@ -73,8 +73,7 @@ jobs:
           cmake -GNinja -B build -DCMAKE_BUILD_TYPE=Release
           ninja -C build -j $(nproc)
           cd ..
-          ls boringssl/build/ssl
-          ls boringssl/build/crypto
+          ls boringssl/build
 
       - if: steps.cache_ngx_brotli.outputs.cache-hit != 'true'
         name: Prepare Brotil
@@ -120,7 +119,7 @@ jobs:
             --with-http_v3_module \
             --with-cc=c++ \
             --with-cc-opt="-march=x86-64-v2 -mtune=generic -I../boringssl/include -x c -O2 -fstack-protector-strong -Wformat -fPIC -g -fno-omit-frame-pointer -flto=auto -ffat-lto-objects -fstack-clash-protection -Werror=format-security -fcf-protection -Wdate-time -D_FORTIFY_SOURCE=3" \
-            --with-ld-opt="-L../boringssl/build/ssl -L../boringssl/build/crypto -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now" \
+            --with-ld-opt="-L../boringssl/build -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now" \
             --prefix=/usr/share/nginx \
             --conf-path=/etc/nginx/nginx.conf \
             --http-log-path=/var/log/nginx/access.log \
