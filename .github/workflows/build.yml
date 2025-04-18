@@ -149,4 +149,19 @@ jobs:
           files: ${{ env.release-file-name }}
           name: ${{ env.release-name }}
           tag_name: ${{ env.release-name }}
+          body: "${{ env.release-name }} with HTTP/3 (QUIC) support and BoringSSL."
           token: ${{ secrets.GH_TOKEN }}
+
+      - name: Cleanup Old Releases
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          releases=$(curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases | jq -r '.[].id')
+          count=0
+          for release_id in $releases; do
+            count=$((count + 1))
+            if [ $count -gt 10 ]; then
+              echo "Deleting release ID: $release_id"
+              curl -s -X DELETE -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases/$release_id
+            fi
+          done
