@@ -107,10 +107,10 @@ jobs:
             --with-cc-opt="-march=x86-64-v2 -mtune=generic -I../boringssl/include -x c -O2 -fstack-protector-strong -Wformat -fPIC -g -fno-omit-frame-pointer -flto=auto -ffat-lto-objects -fstack-clash-protection -Werror=format-security -fcf-protection -Wdate-time -D_FORTIFY_SOURCE=3" \
             --with-ld-opt="-L../boringssl/build -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now" \
             --prefix=/usr/local/nginx \
-            --add-module=../ngx_brotli
-            --add-module=../brutal-nginx
-            --add-module=../nginx-module-vts
-            --add-module=../headers-more-nginx
+            --add-module=../ngx_brotli \
+            --add-module=../brutal-nginx \
+            --add-module=../nginx-module-vts \
+            --add-module=../headers-more-nginx \
             --add-module=../njs
           make -j $(nproc)
 
