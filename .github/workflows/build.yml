@@ -17,30 +17,35 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Apt Update
-        run: sudo apt update
+        run: sudo apt-get update
 
       - name: Install Dependencies
-        run: sudo apt install -y build-essential ca-certificates zlib1g-dev libpcre3 libpcre3-dev tar unzip libssl-dev wget curl git cmake ninja-build libunwind-dev pkg-config
+        run: sudo apt-get install -y build-essential ca-certificates zlib1g-dev libpcre3 libpcre3-dev tar unzip libssl-dev wget curl git cmake ninja-build libunwind-dev pkg-config
 
       - name: Prepare NGINX source
         run: |
           git clone --depth=1 --branch ech-boringssl https://github.com/ZhongWwwHhh/fork-nginx-ech.git ./nginx
+          ls
           
       - name: Prepare brutal
         run: |
-          git clone --depth=1 --branch master https://github.com/sduoduo233/brutal-nginx.git ./brutal-nginx
+          git clone --depth=1 https://github.com/sduoduo233/brutal-nginx.git brutal-nginx
+          ls
       
-      - name: Prepare vts source
+      - name: Prepare vts
         run: |
-          git clone --depth=1 --branch master https://github.com/vozlt/nginx-module-vts.git ./nginx-module-vts
+          git clone --depth=1 https://github.com/vozlt/nginx-module-vts.git nginx-module-vts
+          ls
       
-      - name: Prepare njs source
+      - name: Prepare njs
         run: |
-          git clone --depth=1 --branch master https://github.com/nginx/njs.git ./njs
+          git clone --depth=1 https://github.com/nginx/njs.git njs
+          ls
           
-      - name: Prepare headers-more-nginx source
+      - name: Prepare headers-more-nginx
         run: |
-          git clone --depth=1 --branch master https://github.com/openresty/headers-more-nginx-module.git ./headers-more-nginx
+          git clone --depth=1 https://github.com/openresty/headers-more-nginx-module.git headers-more-nginx
+          ls
 
       - name: Prepare BoringSSL
         run: |
@@ -66,6 +71,7 @@ jobs:
 
       - name: Make Nginx
         run: |
+          ls
           cd nginx
           ./auto/configure \
           	--with-openssl=../boringssl \
