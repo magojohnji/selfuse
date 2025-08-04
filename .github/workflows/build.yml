@@ -69,7 +69,6 @@ jobs:
           ls
           cd nginx
           ./auto/configure \
-          	--with-openssl=../boringssl \
           	--with-openssl-opt="enable-ktls" \
             --with-compat \
             --with-pcre-jit \
