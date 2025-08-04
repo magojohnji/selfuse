@@ -36,11 +36,6 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/vozlt/nginx-module-vts.git nginx-module-vts
           ls
-      
-      - name: Prepare njs
-        run: |
-          git clone --depth=1 https://github.com/nginx/njs.git njs
-          ls
           
       - name: Prepare headers-more-nginx
         run: |
@@ -110,8 +105,7 @@ jobs:
             --add-module=../ngx_brotli \
             --add-module=../brutal-nginx \
             --add-module=../nginx-module-vts \
-            --add-module=../headers-more-nginx \
-            --add-module=../njs
+            --add-module=../headers-more-nginx
           make -j $(nproc)
 
       - name: Generate Release Name
