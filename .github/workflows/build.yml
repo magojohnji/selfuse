@@ -25,22 +25,18 @@ jobs:
       - name: Prepare NGINX source
         run: |
           git clone --depth=1 --branch ech-boringssl https://github.com/ZhongWwwHhh/fork-nginx-ech.git ./nginx
-          ls
           
       - name: Prepare brutal
         run: |
           git clone --depth=1 https://github.com/sduoduo233/brutal-nginx.git brutal-nginx
-          ls
       
       - name: Prepare vts
         run: |
           git clone --depth=1 https://github.com/vozlt/nginx-module-vts.git nginx-module-vts
-          ls
           
       - name: Prepare headers-more-nginx
         run: |
           git clone --depth=1 https://github.com/openresty/headers-more-nginx-module.git headers-more-nginx
-          ls
 
       - name: Prepare BoringSSL
         run: |
@@ -66,9 +62,9 @@ jobs:
 
       - name: Make Nginx
         run: |
-          ls
           cd nginx
           ./auto/configure \
+          	--with-openssl-opt="enable-ktls" \
             --with-compat \
             --with-pcre-jit \
             --with-threads \
@@ -115,38 +111,16 @@ jobs:
           cp nginx/objs/nginx $release_file_name
 
       - name: Release Post
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@master
         with:
-          files: ${{ env.release-file-name }}
-          name: ${{ env.release-name }}
-          tag_name: ${{ env.release-name }}
-          body: "${{ env.release-name }} with HTTP/3 (QUIC) support and BoringSSL."
-          token: ${{ secrets.GH_TOKEN }}
+          tag_name: output
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.release-file-name }}
 
-      - name: Cleanup Old Releases and Tags
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          release_tags=$(curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases | jq -r '.[].tag_name')
-          all_tags=$(curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/git/refs/tags | jq -r '.[].ref' | sed 's|refs/tags/||')
-          releases=$(curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases | jq -r '.[] | @base64')
-          
-          # remove old releases and tags
-          count=0
-          for release in $releases; do
-            release_id=$(echo $release | base64 -d | jq -r '.id')
-            tag_name=$(echo $release | base64 -d | jq -r '.tag_name')
-            count=$((count + 1))
-            if [ $count -gt 10 ]; then
-              echo "Deleting release ID: $release_id and tag: $tag_name"
-              curl -s -X DELETE -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases/$release_id
-              curl -s -X DELETE -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$tag_name
-            fi
-          done
-
-          # find and remove orphan tags
-          orphan_tags=$(comm -23 <(echo "$all_tags" | sort) <(echo "$release_tags" | sort))
-          for tag in $orphan_tags; do
-            echo "Deleting orphan tag: $tag"
-            curl -s -X DELETE -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$tag
-          done
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: output
+          path: ${{ env.release-file-name }}
