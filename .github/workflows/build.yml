@@ -1,10 +1,8 @@
-name: Build NGINX with HTTP/3 (QUIC) support
+name: Build NGINX (BoringSSL) with modules
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
-  pull_request:
     branches:
       - main
   schedule:
@@ -24,49 +22,27 @@ jobs:
       - name: Install Dependencies
         run: sudo apt install -y build-essential ca-certificates zlib1g-dev libpcre3 libpcre3-dev tar unzip libssl-dev wget curl git cmake ninja-build libunwind-dev pkg-config
 
-      - name: Get BoringSSL Latest Commit
-        id: boringssl_commit
-        run: |
-          echo "boringssl-commit=$(git ls-remote https://github.com/google/boringssl.git HEAD | awk '{ print $1 }')" >> $GITHUB_ENV
-
-      - name: Cache BoringSSL
-        id: cache_boringssl
-        uses: actions/cache@v4
-        with:
-          path: boringssl
-          key: ${{ runner.os }}-boringssl-${{ env.boringssl-commit }}
-
-      - name: Get Brotil Latest Commit
-        id: ngx_brotli_commit
-        run: |
-          echo "ngx-brotli-commit=$(git ls-remote https://github.com/google/ngx_brotli.git HEAD | awk '{ print $1 }')" >> $GITHUB_ENV
-
-      - name: Cache Brotil
-        id: cache_ngx_brotli
-        uses: actions/cache@v4
-        with:
-          path: ngx_brotli
-          key: ${{ runner.os }}-ngx_brotli-${{ env.ngx-brotli-commit }}
-
-      - name: Get Nginx Latest Release Tag
-        id: latest_nginx_tag
-        run: |
-          echo "latest-nginx-tag=$(curl -s https://raw.githubusercontent.com/ZhongWwwHhh/fork-nginx-ech/ech-boringssl/src/core/nginx.h | grep '#define NGINX_VERSION' | awk '{print $3}' | tr -d '"')" >> $GITHUB_ENV
-
-      - name: Cache Nginx
-        id: cache_nginx
-        uses: actions/cache@v4
-        with:
-          path: nginx
-          key: ${{ runner.os }}-nginx-${{ env.latest-nginx-tag }}
-
-      - if: steps.cache_nginx.outputs.cache-hit != 'true'
-        name: Prepare NGINX source
+      - name: Prepare NGINX source
         run: |
           git clone --depth=1 --branch ech-boringssl https://github.com/ZhongWwwHhh/fork-nginx-ech.git ./nginx
+          
+      - name: Prepare brutal
+        run: |
+          git clone --depth=1 --branch master https://github.com/sduoduo233/brutal-nginx.git ./brutal-nginx
+      
+      - name: Prepare vts source
+        run: |
+          git clone --depth=1 --branch master https://github.com/vozlt/nginx-module-vts.git ./nginx-module-vts
+      
+      - name: Prepare njs source
+        run: |
+          git clone --depth=1 --branch master https://github.com/nginx/njs.git ./njs
+          
+      - name: Prepare headers-more-nginx source
+        run: |
+          git clone --depth=1 --branch master https://github.com/openresty/headers-more-nginx-module.git ./headers-more-nginx
 
-      - if: steps.cache_boringssl.outputs.cache-hit != 'true'
-        name: Prepare BoringSSL
+      - name: Prepare BoringSSL
         run: |
           git clone --depth=1 https://github.com/google/boringssl.git
           cd boringssl
@@ -75,8 +51,7 @@ jobs:
           cd ..
           ls boringssl/build
 
-      - if: steps.cache_ngx_brotli.outputs.cache-hit != 'true'
-        name: Prepare Brotil
+      - name: Prepare Brotil
         run: |
           git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
           cd ngx_brotli/deps/brotli
@@ -89,22 +64,28 @@ jobs:
           cmake --build . --config Release --target brotlienc
           cd ../../../..
 
-      - if: steps.cache_nginx.outputs.cache-hit != 'true' || steps.cache_boringssl.outputs.cache-hit != 'true' || steps.cache_ngx_brotli.outputs.cache-hit != 'true'
-        name: Make Nginx
+      - name: Make Nginx
         run: |
           cd nginx
           ./auto/configure \
-            --user=nginx \
-            --group=nginx \
+          	--with-openssl=../boringssl \
+          	--with-openssl-opt="enable-ktls" \
             --with-compat \
             --with-pcre-jit \
             --with-threads \
             --with-file-aio \
-            --add-module=../ngx_brotli \
+            --with-stream \
+            --with-stream_realip_module \
+            --with-stream_ssl_module \
+            --with-stream_ssl_preread_module\
+            --with-mail \
+            --with-mail_ssl_module \
             --with-http_v2_module \
+            --with-http_v3_module \
             --with-http_ssl_module \
             --with-http_gunzip_module \
             --with-http_sub_module \
+            --with-http_stub_status_module \
             --with-http_addition_module \
             --with-http_realip_module \
             --with-http_mp4_module \
@@ -116,22 +97,15 @@ jobs:
             --with-http_secure_link_module \
             --with-http_slice_module \
             --with-ld-opt=-Wl,-E \
-            --with-http_v3_module \
             --with-cc=c++ \
             --with-cc-opt="-march=x86-64-v2 -mtune=generic -I../boringssl/include -x c -O2 -fstack-protector-strong -Wformat -fPIC -g -fno-omit-frame-pointer -flto=auto -ffat-lto-objects -fstack-clash-protection -Werror=format-security -fcf-protection -Wdate-time -D_FORTIFY_SOURCE=3" \
             --with-ld-opt="-L../boringssl/build -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now" \
-            --prefix=/usr/share/nginx \
-            --conf-path=/etc/nginx/nginx.conf \
-            --http-log-path=/var/log/nginx/access.log \
-            --error-log-path=/var/log/nginx/error.log \
-            --lock-path=/var/lock/nginx.lock \
-            --pid-path=/run/nginx.pid \
-            --modules-path=/usr/lib/nginx/modules \
-            --http-client-body-temp-path=/var/lib/nginx/body \
-            --http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
-            --http-proxy-temp-path=/var/lib/nginx/proxy \
-            --http-scgi-temp-path=/var/lib/nginx/scgi \
-            --http-uwsgi-temp-path=/var/lib/nginx/uwsgi
+            --prefix=/usr/local/nginx \
+            --add-module=../ngx_brotli
+            --add-module=../brutal-nginx
+            --add-module=../nginx-module-vts
+            --add-module=../headers-more-nginx
+            --add-module=../njs
           make -j $(nproc)
 
       - name: Generate Release Name
@@ -142,8 +116,7 @@ jobs:
           echo "release-file-name=${release_file_name}" >> $GITHUB_ENV
           cp nginx/objs/nginx $release_file_name
 
-      - if: steps.cache_nginx.outputs.cache-hit != 'true' || steps.cache_boringssl.outputs.cache-hit != 'true' || steps.cache_ngx_brotli.outputs.cache-hit != 'true'
-        name: Release Post
+      - name: Release Post
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.release-file-name }}
