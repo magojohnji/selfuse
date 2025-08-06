@@ -4,9 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
-    paths:
-      - '!.github/**' 
+      - main
 
 jobs:
   build-nginx:
