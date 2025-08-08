@@ -1,4 +1,4 @@
-name: Build NGINX Official (OpenSSL) with Brutal
+name: Build NGINX Official (OpenSSL)
 
 on:
   workflow_dispatch:
