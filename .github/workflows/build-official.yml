@@ -45,6 +45,14 @@ jobs:
           cd ..
           git clone https://github.com/leev/ngx_http_geoip2_module.git --depth=1
 
+      - name: Install libmaxminddb
+        run: |
+          wget https://github.com/maxmind/libmaxminddb/releases/download/1.12.2/libmaxminddb-1.12.2.tar.gz
+          tar -zxvf ./libmaxminddb-1.12.2.tar.gz
+          cd libmaxminddb 
+          ./configure 
+          make && make install 
+          sudo ldconfig
 
       # Configure and compile Nginx with the dynamic module
       - name: Configure and build Nginx with module
