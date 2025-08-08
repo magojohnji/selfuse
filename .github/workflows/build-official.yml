@@ -19,8 +19,9 @@ jobs:
       # Install dependencies
       - name: Install dependencies
         run: |
+          sudo add-apt-repository ppa:maxmind/ppa
           sudo apt update
-          sudo apt install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev git
+          sudo apt install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev git libmaxminddb0 libmaxminddb-dev mmdb-bin
 
       # Download Nginx source code
       - name: Download Nginx source
@@ -44,15 +45,6 @@ jobs:
         run: |
           cd ..
           git clone https://github.com/leev/ngx_http_geoip2_module.git --depth=1
-
-      - name: Install libmaxminddb
-        run: |
-          wget https://github.com/maxmind/libmaxminddb/releases/download/1.12.2/libmaxminddb-1.12.2.tar.gz
-          tar -zxvf ./libmaxminddb-1.12.2.tar.gz
-          cd libmaxminddb 
-          ./configure 
-          make && make install 
-          sudo ldconfig
 
       # Configure and compile Nginx with the dynamic module
       - name: Configure and build Nginx with module
