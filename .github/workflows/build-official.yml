@@ -1,4 +1,4 @@
-name: Build NGINX Official (OpenSSL)
+name: Build NGINX Official (OpenSSL) with Brutal
 
 on:
   workflow_dispatch:
@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout the code
+      - name: Download Brutal NGINX
+        run: |
+          git clone https://github.com/xtccc/brutal-nginx.git --depth=1
+
       # Install dependencies
       - name: Install dependencies
         run: |
@@ -23,14 +28,7 @@ jobs:
           pwd 
           ls -lhat 
           cd ..
-          git clone https://github.com/nginx/nginx.git -b release-1.29.0 --depth=1
-
-      # Download Nginx source code
-      - name: Download GeoIP2
-        run: |
-          pwd 
-          ls -lhat 
-          cd ..
+          rm -rf nginx
           git clone https://github.com/nginx/nginx.git -b release-1.29.0 --depth=1
       
       # download openssl ssl
@@ -39,8 +37,15 @@ jobs:
           pwd 
           ls -lhat 
           cd ..
-          git clone https://github.com/leev/ngx_http_geoip2_module.git --depth=1
+          git clone https://github.com/openssl/openssl.git -b openssl-3.5.1 --depth=1
           
+      # download nginx-module-vts
+      - name: Download GeoIP2
+        run: |
+          cd ..
+          git clone https://github.com/leev/ngx_http_geoip2_module.git --depth=1
+
+
       # Configure and compile Nginx with the dynamic module
       - name: Configure and build Nginx with module
         run: |
