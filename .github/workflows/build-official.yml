@@ -47,7 +47,7 @@ jobs:
           --with-http_v3_module --with-mail --with-mail_ssl_module --with-stream --with-stream_realip_module --with-stream_ssl_module \
           --with-stream_ssl_preread_module \
           --with-openssl=../openssl \
-          --with-openssl-opt="enable-ktls" \
+          --with-openssl-opt="enable-ktls"
           make -j$(nproc)
           sudo make install
 
