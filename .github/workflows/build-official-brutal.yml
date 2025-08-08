@@ -26,9 +26,9 @@ jobs:
       - name: Download Nginx source
         run: |
           pwd 
-          rm -rf nginx
           ls -lhat 
           cd ..
+          rm -rf nginx
           git clone https://github.com/nginx/nginx.git -b release-1.29.0 --depth=1
       
       # download openssl ssl
