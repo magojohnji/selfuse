@@ -24,6 +24,14 @@ jobs:
           ls -lhat 
           cd ..
           git clone https://github.com/nginx/nginx.git -b release-1.29.0 --depth=1
+
+      # Download Nginx source code
+      - name: Download GeoIP2
+        run: |
+          pwd 
+          ls -lhat 
+          cd ..
+          git clone https://github.com/nginx/nginx.git -b release-1.29.0 --depth=1
       
       # download openssl ssl
       - name: Download openssl ssl
@@ -31,7 +39,7 @@ jobs:
           pwd 
           ls -lhat 
           cd ..
-          git clone https://github.com/openssl/openssl.git -b openssl-3.5.1 --depth=1
+          git clone https://github.com/leev/ngx_http_geoip2_module.git --depth=1
           
       # Configure and compile Nginx with the dynamic module
       - name: Configure and build Nginx with module
@@ -45,9 +53,10 @@ jobs:
           --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module \
           --with-http_slice_module --with-http_ssl_module --with-http_stub_status_module --with-http_sub_module --with-http_v2_module \
           --with-http_v3_module --with-mail --with-mail_ssl_module --with-stream --with-stream_realip_module --with-stream_ssl_module \
-          --with-stream_ssl_preread_module --with-http_geoip_module \
+          --with-stream_ssl_preread_module \
           --with-openssl=../openssl \
-          --with-openssl-opt="enable-ktls"
+          --with-openssl-opt="enable-ktls" \
+          --add-module=../ngx_http_geoip2_module
           make -j$(nproc)
           sudo make install
 
