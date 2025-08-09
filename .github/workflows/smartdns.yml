@@ -1,0 +1,54 @@
+name: Build SmartDNS Static
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-nginx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev git
+  
+      - name: Download SmartDNS source
+        run: |
+          cd ..
+          git clone --depth=1 https://github.com/pymumu/smartdns.git
+      
+      - name: Download openssl ssl
+        run: |
+          cd ..
+          git clone --no-checkout https://github.com/openssl/openssl.git
+          cd openssl
+          git fetch --depth=1 origin refs/tags/openssl-3.5.2:refs/tags/openssl-3.5.2
+          git checkout tags/openssl-3.5.2
+
+      - name: Build OpenSSL static
+        run: |
+          cd ../openssl
+          ./config --prefix=/usr/local/openssl-static no-shared
+          make -j$(nproc)
+          sudo make install
+        
+      - name: Build SmartDNS
+        run: |
+          cd ../smartdns
+          CFLAGS="-I /usr/local/openssl-static/include" LDFLAGS="-L /usr/local/openssl-static" package/build-pkg.sh --platform debian --arch x86-64 --static
+          tar -zcvf smartdns-built.tar.gz package/*.deb
+          mv smartdns-built.tar.gz $GITHUB_WORKSPACE
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartdns-output
+          path: smartdns-built.tar.gz
+
+      - name: Release
+        uses: softprops/action-gh-release@v2.3.2
+        with:
+          tag_name: smartdns-output
+          draft: false
+          prerelease: false
+          files: smartdns-built.tar.gz
