@@ -20,7 +20,7 @@ jobs:
           git fetch --depth=1 origin refs/tags/release-1.29.0:refs/tags/release-1.29.0
           git checkout tags/release-1.29.0
       
-      - name: Download openssl ssl
+      - name: Download OpenSSL source
         run: |
           cd ..
           git clone --no-checkout https://github.com/openssl/openssl.git
@@ -28,7 +28,7 @@ jobs:
           git fetch --depth=1 origin refs/tags/openssl-3.5.2:refs/tags/openssl-3.5.2
           git checkout tags/openssl-3.5.2
           
-      - name: Configure and build Nginx
+      - name: Build Nginx
         run: |
           cd ../nginx
           auto/configure --prefix=/usr/local/nginx --with-compat --with-http_v2_module \
@@ -56,13 +56,13 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: official-output
+          name: nginx(official)-output
           path: nginx-built.tar.gz
 
       - name: Release
         uses: softprops/action-gh-release@v2.3.2
         with:
-          tag_name: official-output
+          tag_name: nginx(official)-output
           draft: false
           prerelease: false
           files: nginx-built.tar.gz
