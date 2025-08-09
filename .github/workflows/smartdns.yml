@@ -25,7 +25,7 @@ jobs:
           git fetch --depth=1 origin refs/tags/openssl-3.5.2:refs/tags/openssl-3.5.2
           git checkout tags/openssl-3.5.2
 
-      - name: Build OpenSSL static
+      - name: Build OpenSSL
         run: |
           cd ../openssl
           ./config --prefix=/usr/local/openssl-static
@@ -38,8 +38,7 @@ jobs:
           export CFLAGS="-I /usr/local/openssl-static/include"
           export LDFLAGS="-L /usr/local/openssl-static"
           package/build-pkg.sh --platform debian --arch x86-64 --static
-          tar -zcvf smartdns-built.tar.gz package/*.deb
-          mv smartdns-built.tar.gz $GITHUB_WORKSPACE
+          tar -zcvf $GITHUB_WORKSPACE/smartdns-built.tar.gz package/*.deb
           
       - name: Upload artifact
         uses: actions/upload-artifact@v4
