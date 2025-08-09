@@ -2,9 +2,6 @@ name: Build NGINX Official (OpenSSL) with Brutal
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build-nginx:
