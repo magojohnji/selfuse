@@ -35,6 +35,14 @@ jobs:
       - name: Build SmartDNS
         run: |
           cd ../smartdns
+          echo "!!! / !!!"
+          ls /usr/local/openssl-static
+          echo "!!! include !!!"
+          ls /usr/local/openssl-static/include
+          echo "!!! openssl !!!"
+          ls /usr/local/openssl-static/include/openssl
+          echo "!!! lib64 !!!"
+          /usr/local/openssl-static/lib64
           export CFLAGS="-I /usr/local/openssl-static/include"
           export LDFLAGS="-L /usr/local/openssl-static"
           package/build-pkg.sh --platform debian --arch x86-64 --static
