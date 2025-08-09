@@ -35,7 +35,9 @@ jobs:
       - name: Build SmartDNS
         run: |
           cd ../smartdns
-          CFLAGS="-I /usr/local/openssl-static/include" LDFLAGS="-L /usr/local/openssl-static" package/build-pkg.sh --platform debian --arch x86-64 --static
+          export CFLAGS="-I /usr/local/openssl-static/include"
+          export LDFLAGS="-L /usr/local/openssl-static"
+          package/build-pkg.sh --platform debian --arch x86-64 --static
           tar -zcvf smartdns-built.tar.gz package/*.deb
           mv smartdns-built.tar.gz $GITHUB_WORKSPACE
           
