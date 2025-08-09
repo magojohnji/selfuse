@@ -28,7 +28,7 @@ jobs:
           git fetch --depth=1 origin refs/tags/openssl-3.5.2:refs/tags/openssl-3.5.2
           git checkout tags/openssl-3.5.2
           
-      - name: Configure and build Nginx with module
+      - name: Configure and build Nginx
         run: |
           cd ../nginx
           auto/configure --prefix=/usr/local/nginx --with-compat --with-http_v2_module \
