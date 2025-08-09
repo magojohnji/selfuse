@@ -44,7 +44,7 @@ jobs:
           sudo make install
 
       - name: Verify Nginx version
-        run: /usr/local/nginx/sbin/nginx -v
+        run: /usr/local/nginx/sbin/nginx -V
 
       - name: Package Nginx binary
         run: |
