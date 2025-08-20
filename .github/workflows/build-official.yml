@@ -17,8 +17,8 @@ jobs:
           cd ..
           git clone --no-checkout https://github.com/nginx/nginx.git
           cd nginx
-          git fetch --depth=1 origin refs/tags/release-1.29.0:refs/tags/release-1.29.0
-          git checkout tags/release-1.29.0
+          git fetch --depth=1 origin refs/tags/release-1.29.0:refs/tags/release-1.29.1
+          git checkout tags/release-1.29.1
       
       - name: Download OpenSSL source
         run: |
