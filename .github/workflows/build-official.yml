@@ -6,6 +6,8 @@ on:
 jobs:
   build-nginx:
     runs-on: ubuntu-latest
+    container:
+      image: debian:latest
     steps:
       - name: Install dependencies
         run: |
@@ -17,7 +19,7 @@ jobs:
           cd ..
           git clone --no-checkout https://github.com/nginx/nginx.git
           cd nginx
-          git fetch --depth=1 origin refs/tags/release-1.29.0:refs/tags/release-1.29.1
+          git fetch --depth=1 origin refs/tags/release-1.29.1:refs/tags/release-1.29.1
           git checkout tags/release-1.29.1
       
       - name: Download OpenSSL source
