@@ -52,7 +52,6 @@ jobs:
         run: |
           cd /usr/local/nginx
           sudo tar -czvf nginx-built.tar.gz sbin/ conf/ html/ logs/
-          sudo chown runner:runner nginx-built.tar.gz
           sudo mv nginx-built.tar.gz $GITHUB_WORKSPACE
           
       - name: Upload artifact
