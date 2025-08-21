@@ -53,17 +53,20 @@ jobs:
           cd /usr/local/nginx
           sudo tar -czvf nginx-built.tar.gz sbin/ conf/ html/ logs/
           sudo mv nginx-built.tar.gz $GITHUB_WORKSPACE
+
+      - name: Set TAG_NAME with UTC date
+        run: echo "DATE=v$(date -u +'%Y.%m.%d-%H%M')" >> $GITHUB_ENV
           
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nginx(official)-output
+          name: "BUILD ${{ env.DATE }}"
           path: nginx-built.tar.gz
 
       - name: Release
         uses: softprops/action-gh-release@v2.3.2
         with:
-          tag_name: nginx(official)-output
+          tag_name: "BUILD ${{ env.DATE }}"
           draft: false
           prerelease: false
           files: nginx-built.tar.gz
