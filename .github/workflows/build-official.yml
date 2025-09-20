@@ -19,14 +19,11 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y build-essential libpcre2-8-0 libpcre2-dev zlib1g zlib1g-dev libssl-dev git sudo curl
+          apt-get install -y build-essential libpcre2-8-0 libpcre2-dev zlib1g zlib1g-dev libssl-dev git sudo curl aria2
 
-      - name: Download NGINX source
+      - name: Download and extract Nginx source
         run: |
           cd ..
-          git clone --no-checkout https://github.com/nginx/nginx.git
-          cd nginx
-          
           if [[ -n "${{ github.event.inputs.nginx_version }}" ]]; then
             NGINX_TAG=${{ github.event.inputs.nginx_version }}
           else
@@ -36,17 +33,15 @@ jobs:
               sed 's/.*refs\/tags\/\(release-[0-9.]*\).*/\1/' | \
               sort -V | tail -n 1)
           fi
-          echo "Using NGINX version: $NGINX_TAG"
+          echo "Using Nginx version: $NGINX_TAG"
           
-          git fetch --depth=1 origin refs/tags/$NGINX_TAG:refs/tags/$NGINX_TAG
-          git checkout tags/$NGINX_TAG
+          aria2c -x 8 -s 8 -o nginx.tar.gz https://github.com/nginx/nginx/archive/refs/tags/$NGINX_TAG.tar.gz
+          tar -xzf nginx.tar.gz
+          mv nginx-$NGINX_TAG nginx
 
-      - name: Download OpenSSL source
+      - name: Download and extract OpenSSL source
         run: |
           cd ..
-          git clone --no-checkout https://github.com/openssl/openssl.git
-          cd openssl
-          
           if [[ -n "${{ github.event.inputs.openssl_version }}" ]]; then
             OPENSSL_TAG=${{ github.event.inputs.openssl_version }}
           else
@@ -58,8 +53,9 @@ jobs:
           fi
           echo "Using OpenSSL version: $OPENSSL_TAG"
           
-          git fetch --depth=1 origin refs/tags/$OPENSSL_TAG:refs/tags/$OPENSSL_TAG
-          git checkout tags/$OPENSSL_TAG
+          aria2c -x 8 -s 8 -o openssl.tar.gz https://github.com/openssl/openssl/archive/refs/tags/$OPENSSL_TAG.tar.gz
+          tar -xzf openssl.tar.gz
+          mv openssl-$OPENSSL_TAG openssl
 
       - name: Build Nginx
         run: |
