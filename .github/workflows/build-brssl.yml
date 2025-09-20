@@ -45,7 +45,7 @@ jobs:
           mv nginx-$NGINX_TAG nginx
           rm nginx.tar.gz
 
-      - name: Download and extract BoringSSL source
+      - name: Download BoringSSL source
         run: |
           cd ..
           if [ -n "${{ github.event.inputs.boringssl_version }}" ]; then
@@ -55,10 +55,10 @@ jobs:
               jq -r '.sha')
           fi
           echo "Using BoringSSL commit: $BORINGSSL_TAG"
-          aria2c -x 8 -s 8 -o boringssl.tar.gz https://github.com/google/boringssl/archive/$BORINGSSL_TAG.tar.gz
-          tar -xzf boringssl.tar.gz
-          mv boringssl-$BORINGSSL_TAG boringssl
-          rm boringssl.tar.gz
+          git clone --no-checkout https://github.com/google/boringssl.git boringssl
+          cd boringssl
+          git fetch --depth=1 origin $BORINGSSL_TAG
+          git checkout $BORINGSSL_TAG
 
       - name: Build BoringSSL
         run: |
