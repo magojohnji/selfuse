@@ -1,121 +1,110 @@
-name: Build NGINX ECH (BoringSSL) with modules
+name: Build NGINX (BoringSSL)
 
 on:
   workflow_dispatch:
+    inputs:
+      nginx_version:
+        description: 'Nginx version tag (e.g., release-1.29.1). Leave empty for latest stable.'
+        required: false
+      boringssl_version:
+        description: 'BoringSSL commit SHA (e.g., a1b38f1). Leave empty for latest commit.'
+        required: false
 
 jobs:
-  build:
+  build-nginx:
     runs-on: ubuntu-latest
-
+    container:
+      image: debian:latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Apt Update
-        run: sudo apt-get update
-
-      - name: Install Dependencies
-        run: sudo apt-get install -y build-essential ca-certificates zlib1g-dev libpcre3 libpcre3-dev tar unzip libssl-dev wget curl git cmake ninja-build libunwind-dev pkg-config
-
-      - name: Prepare NGINX source
+      - name: Install dependencies
         run: |
-          git clone --depth=1 --branch ech-boringssl https://github.com/ZhongWwwHhh/fork-nginx-ech.git ./nginx
-          
-      - name: Prepare brutal
-        run: |
-          git clone --depth=1 https://github.com/sduoduo233/brutal-nginx.git brutal-nginx
-      
-      - name: Prepare vts
-        run: |
-          git clone --depth=1 https://github.com/vozlt/nginx-module-vts.git nginx-module-vts
-          
-      - name: Prepare headers-more-nginx
-        run: |
-          git clone --depth=1 https://github.com/openresty/headers-more-nginx-module.git headers-more-nginx
+          apt-get update
+          apt-get install -y build-essential libpcre2-8-0 libpcre2-dev zlib1g zlib1g-dev \
+            git sudo curl aria2 cmake gcc g++ jq
 
-      - name: Prepare BoringSSL
-        run: |
-          git clone --depth=1 https://github.com/google/boringssl.git
-          cd boringssl
-          cmake -GNinja -B build -DCMAKE_BUILD_TYPE=Release
-          ninja -C build -j $(nproc)
-          cd ..
-          ls boringssl/build
-
-      - name: Prepare Brotil
-        run: |
-          git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
-          cd ngx_brotli/deps/brotli
-          mkdir out && cd out
-          cmake -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_C_FLAGS="-Ofast -march=x86-64-v2 -mtune=generic -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-            -DCMAKE_CXX_FLAGS="-Ofast -march=x86-64-v2 -mtune=generic -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-            -DCMAKE_INSTALL_PREFIX=./installed ..
-          cmake --build . --config Release --target brotlienc
-          cd ../../../..
-
-      - name: Make Nginx
-        run: |
-          cd nginx
-          ./auto/configure \
-          	--with-openssl-opt="enable-ktls" \
-            --with-compat \
-            --with-pcre-jit \
-            --with-threads \
-            --with-file-aio \
-            --with-stream \
-            --with-stream_realip_module \
-            --with-stream_ssl_module \
-            --with-stream_ssl_preread_module\
-            --with-mail \
-            --with-mail_ssl_module \
-            --with-http_v2_module \
-            --with-http_v3_module \
-            --with-http_ssl_module \
-            --with-http_gunzip_module \
-            --with-http_sub_module \
-            --with-http_stub_status_module \
-            --with-http_addition_module \
-            --with-http_realip_module \
-            --with-http_mp4_module \
-            --with-http_auth_request_module \
-            --with-http_dav_module \
-            --with-http_flv_module \
-            --with-http_gzip_static_module \
-            --with-http_random_index_module \
-            --with-http_secure_link_module \
-            --with-http_slice_module \
-            --with-ld-opt=-Wl,-E \
-            --with-cc=c++ \
-            --with-cc-opt="-march=x86-64-v2 -mtune=generic -I../boringssl/include -x c -O2 -fstack-protector-strong -Wformat -fPIC -g -fno-omit-frame-pointer -flto=auto -ffat-lto-objects -fstack-clash-protection -Werror=format-security -fcf-protection -Wdate-time -D_FORTIFY_SOURCE=3" \
-            --with-ld-opt="-L../boringssl/build -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now" \
-            --prefix=/usr/local/nginx \
-            --add-module=../ngx_brotli \
-            --add-module=../brutal-nginx \
-            --add-module=../nginx-module-vts \
-            --add-module=../headers-more-nginx
-          make -j $(nproc)
-
-      - name: Generate Release Name
-        run: |
-          release_name="nginx-${{ env.latest-nginx-tag }}-$(date +'%Y.%m.%d')"
-          release_file_name="${release_name}-linux-amd64"
-          echo "release-name=${release_name}" >> $GITHUB_ENV
-          echo "release-file-name=${release_file_name}" >> $GITHUB_ENV
-          cp nginx/objs/nginx $release_file_name
-
-      - name: Release Post
-        uses: softprops/action-gh-release@master
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          tag_name: output
-          draft: false
-          prerelease: false
-          files: |
-            ${{ env.release-file-name }}
+          go-version: 'stable'  # Installs the latest stable Go version
+
+      - name: Download and extract Nginx source
+        run: |
+          cd ..
+          if [ -n "${{ github.event.inputs.nginx_version }}" ]; then
+            NGINX_TAG=${{ github.event.inputs.nginx_version }}
+          else
+            NGINX_TAG=$(curl -s https://api.github.com/repos/nginx/nginx/git/refs/tags | \
+              grep '"ref": "refs/tags/release-' | \
+              grep -vE 'rc|beta|alpha' | \
+              sed 's/.*refs\/tags\/\(release-[0-9.]*\).*/\1/' | \
+              sort -V | tail -n 1)
+          fi
+          echo "Using Nginx version: $NGINX_TAG"
+          aria2c -x 8 -s 8 -o nginx.tar.gz https://github.com/nginx/nginx/archive/refs/tags/$NGINX_TAG.tar.gz
+          tar -xzf nginx.tar.gz
+          mv nginx-$NGINX_TAG nginx
+          rm nginx.tar.gz
+
+      - name: Download and extract BoringSSL source
+        run: |
+          cd ..
+          if [ -n "${{ github.event.inputs.boringssl_version }}" ]; then
+            BORINGSSL_TAG=${{ github.event.inputs.boringssl_version }}
+          else
+            BORINGSSL_TAG=$(curl -s https://api.github.com/repos/google/boringssl/commits/master | \
+              jq -r '.sha')
+          fi
+          echo "Using BoringSSL commit: $BORINGSSL_TAG"
+          aria2c -x 8 -s 8 -o boringssl.tar.gz https://github.com/google/boringssl/archive/$BORINGSSL_TAG.tar.gz
+          tar -xzf boringssl.tar.gz
+          mv boringssl-$BORINGSSL_TAG boringssl
+          rm boringssl.tar.gz
+
+      - name: Build BoringSSL
+        run: |
+          cd ../boringssl
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+
+      - name: Build Nginx
+        run: |
+          cd ../nginx
+          ./auto/configure --prefix=/usr/local/nginx --with-compat --with-http_v2_module \
+            --with-file-aio --with-threads --with-http_addition_module --with-http_auth_request_module \
+            --with-http_dav_module --with-http_flv_module --with-http_gunzip_module --with-http_gzip_static_module \
+            --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module \
+            --with-http_slice_module --with-http_ssl_module --with-http_stub_status_module --with-http_sub_module --with-http_v2_module \
+            --with-http_v3_module --with-stream --with-stream_realip_module --with-stream_ssl_module \
+            --with-stream_ssl_preread_module \
+            --with-openssl=../boringssl \
+            --with-openssl-opt="no-ssl3 no-weak-ssl-ciphers"
+          make -j$(nproc)
+          sudo make install
+
+      - name: Verify Nginx version
+        run: /usr/local/nginx/sbin/nginx -V
+
+      - name: Package Nginx binary
+        run: |
+          cd /usr/local/nginx
+          sudo tar -czvf nginx-built.tar.gz sbin/ conf/ html/ logs/
+          sudo mv nginx-built.tar.gz $GITHUB_WORKSPACE
+
+      - name: Set TAG_NAME with UTC date
+        run: echo "DATE=v$(date -u +'%Y.%m.%d-%H%M')" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: output
-          path: ${{ env.release-file-name }}
+          name: "BUILD ${{ env.DATE }}"
+          path: nginx-built.tar.gz
+
+      - name: Release
+        uses: softprops/action-gh-release@v2.3.2
+        with:
+          tag_name: "BUILD_${{ env.DATE }}"
+          draft: false
+          prerelease: false
+          files: nginx-built.tar.gz
