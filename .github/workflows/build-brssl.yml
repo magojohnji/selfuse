@@ -6,9 +6,6 @@ on:
       nginx_version:
         description: 'Nginx version tag (e.g., release-1.29.1). Leave empty for latest stable.'
         required: false
-      boringssl_version:
-        description: 'BoringSSL commit SHA (e.g., a1b38f1). Leave empty for latest commit.'
-        required: false
 
 jobs:
   build-nginx:
@@ -20,7 +17,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y build-essential libpcre2-8-0 libpcre2-dev zlib1g zlib1g-dev \
-            git sudo curl aria2 cmake gcc g++ jq
+            git sudo curl aria2 cmake gcc g++
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -48,17 +45,7 @@ jobs:
       - name: Download BoringSSL source
         run: |
           cd ..
-          if [ -n "${{ github.event.inputs.boringssl_version }}" ]; then
-            BORINGSSL_TAG=${{ github.event.inputs.boringssl_version }}
-          else
-            BORINGSSL_TAG=$(curl -s https://api.github.com/repos/google/boringssl/commits/master | \
-              jq -r '.sha')
-          fi
-          echo "Using BoringSSL commit: $BORINGSSL_TAG"
-          git clone --no-checkout https://github.com/google/boringssl.git boringssl
-          cd boringssl
-          git fetch --depth=1 origin $BORINGSSL_TAG
-          git checkout $BORINGSSL_TAG
+          git clone --depth=1 https://github.com/google/boringssl.git boringssl
 
       - name: Build BoringSSL
         run: |
