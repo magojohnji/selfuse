@@ -24,7 +24,7 @@ jobs:
       - name: Download and extract Nginx source
         run: |
           cd ..
-          if [[ -n "${{ github.event.inputs.nginx_version }}" ]]; then
+          if [ -n "${{ github.event.inputs.nginx_version }}" ]; then
             NGINX_TAG=${{ github.event.inputs.nginx_version }}
           else
             NGINX_TAG=$(curl -s https://api.github.com/repos/nginx/nginx/git/refs/tags | \
@@ -42,7 +42,7 @@ jobs:
       - name: Download and extract OpenSSL source
         run: |
           cd ..
-          if [[ -n "${{ github.event.inputs.openssl_version }}" ]]; then
+          if [ -n "${{ github.event.inputs.openssl_version }}" ]; then
             OPENSSL_TAG=${{ github.event.inputs.openssl_version }}
           else
             OPENSSL_TAG=$(curl -s https://api.github.com/repos/openssl/openssl/git/refs/tags | \
