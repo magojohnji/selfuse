@@ -21,6 +21,12 @@ jobs:
           apt-get update
           apt-get install -y build-essential libpcre2-8-0 libpcre2-dev zlib1g zlib1g-dev libssl-dev git sudo curl aria2
 
+      - name: Set up GCC
+        uses: egor-tensin/setup-gcc@v1.3
+        with:
+          version: latest
+          platform: x64
+
       - name: Download and extract Nginx source
         run: |
           cd ..
