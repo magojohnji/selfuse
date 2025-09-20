@@ -2,6 +2,13 @@ name: Build NGINX (OpenSSL)
 
 on:
   workflow_dispatch:
+    inputs:
+      nginx_version:
+        description: 'Nginx version tag (e.g., release-1.29.1). Leave empty for latest stable.'
+        required: false
+      openssl_version:
+        description: 'OpenSSL version tag (e.g., openssl-3.5.2). Leave empty for latest stable.'
+        required: false
 
 jobs:
   build-nginx:
@@ -12,28 +19,52 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y build-essential libpcre2-8-0 libpcre2-dev zlib1g zlib1g-dev libssl-dev git sudo
+          apt-get install -y build-essential libpcre2-8-0 libpcre2-dev zlib1g zlib1g-dev libssl-dev git sudo curl
 
-      - name: Download Nginx source
+      - name: Download NGINX source
         run: |
           cd ..
           git clone --no-checkout https://github.com/nginx/nginx.git
           cd nginx
-          git fetch --depth=1 origin refs/tags/release-1.29.1:refs/tags/release-1.29.1
-          git checkout tags/release-1.29.1
-      
+          
+          if [[ -n "${{ github.event.inputs.nginx_version }}" ]]; then
+            NGINX_TAG=${{ github.event.inputs.nginx_version }}
+          else
+            NGINX_TAG=$(curl -s https://api.github.com/repos/nginx/nginx/git/refs/tags | \
+              grep '"ref": "refs/tags/release-' | \
+              grep -vE 'rc|beta|alpha' | \
+              sed 's/.*refs\/tags\/\(release-[0-9.]*\).*/\1/' | \
+              sort -V | tail -n 1)
+          fi
+          echo "Using NGINX version: $NGINX_TAG"
+          
+          git fetch --depth=1 origin refs/tags/$NGINX_TAG:refs/tags/$NGINX_TAG
+          git checkout tags/$NGINX_TAG
+
       - name: Download OpenSSL source
         run: |
           cd ..
           git clone --no-checkout https://github.com/openssl/openssl.git
           cd openssl
-          git fetch --depth=1 origin refs/tags/openssl-3.5.2:refs/tags/openssl-3.5.2
-          git checkout tags/openssl-3.5.2
           
+          if [[ -n "${{ github.event.inputs.openssl_version }}" ]]; then
+            OPENSSL_TAG=${{ github.event.inputs.openssl_version }}
+          else
+            OPENSSL_TAG=$(curl -s https://api.github.com/repos/openssl/openssl/git/refs/tags | \
+              grep '"ref": "refs/tags/openssl-' | \
+              grep -vE 'rc|beta|alpha' | \
+              sed 's/.*refs\/tags\/\(openssl-[0-9.]*\).*/\1/' | \
+              sort -V | tail -n 1)
+          fi
+          echo "Using OpenSSL version: $OPENSSL_TAG"
+          
+          git fetch --depth=1 origin refs/tags/$OPENSSL_TAG:refs/tags/$OPENSSL_TAG
+          git checkout tags/$OPENSSL_TAG
+
       - name: Build Nginx
         run: |
           cd ../nginx
-          auto/configure --prefix=/usr/local/nginx --with-compat --with-http_v2_module \
+          ./auto/configure --prefix=/usr/local/nginx --with-compat --with-http_v2_module \
             --with-file-aio --with-threads --with-http_addition_module --with-http_auth_request_module \
             --with-http_dav_module --with-http_flv_module --with-http_gunzip_module --with-http_gzip_static_module \
             --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module \
@@ -56,7 +87,7 @@ jobs:
 
       - name: Set TAG_NAME with UTC date
         run: echo "DATE=v$(date -u +'%Y.%m.%d-%H%M')" >> $GITHUB_ENV
-          
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
