@@ -1,0 +1,113 @@
+name: Build curl (Windows, OpenSSL with X25519MLKEM768)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-windows-curl:
+    runs-on: windows-latest
+    env:
+      MSYS2_PATH_TYPE: "inherit"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2 (mingw-w64)
+        uses: msys2/setup-msys2@v3
+        with:
+          msystem: MINGW64
+          update: true
+          install: >
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-curl
+            perl
+            git
+          pacman_opts: --noconfirm
+
+      - name: Add mingw64 to PATH
+        run: |
+          echo "::add-path::C:\msys64\mingw64\bin"
+      - name: Show environment
+        shell: bash
+        run: |
+          uname -a
+          gcc --version
+          cmake --version
+
+      # === build OpenSSL from source (required: >=3.5) ===
+      - name: Download OpenSSL source
+        shell: bash
+        run: |
+          set -e
+          OPENSSL_VERSION="openssl-3.5.4"
+          if [ ! -f "${OPENSSL_VERSION}.tar.gz" ]; then
+            curl -L -o ${OPENSSL_VERSION}.tar.gz https://www.openssl.org/source/${OPENSSL_VERSION}.tar.gz
+          fi
+          tar xzf ${OPENSSL_VERSION}.tar.gz
+
+      - name: Build & install OpenSSL (mingw64)
+        shell: bash
+        run: |
+          set -e
+          cd openssl-3.5.0
+          # mingw64 平台配置，prefix 指向 /mingw64（MSYS2 下的 MinGW64 root）
+          # 依据需要可加入其它 Configure 选项
+          ./Configure mingw64 --prefix=/mingw64 --openssldir=/mingw64/ssl shared
+          make -j$(nproc)
+          make install_sw   # 安装到 /mingw64（msys2 的 mingw64 root）
+          cd ..
+
+      - name: Verify openssl was installed
+        shell: bash
+        run: |
+          /mingw64/bin/openssl version -a || true
+          # 确认是否包含 ML-KEM / X25519MLKEM768 提示（部分版本会在 release notes 中说明）
+          /mingw64/bin/openssl ciphers -v | head -n 20 || true
+
+      # === build curl from source, link to the just-built OpenSSL ===
+      - name: Download curl source
+        shell: bash
+        run: |
+          set -e
+          git clone --depth=1 https://github.com/curl/curl.git curl-src
+          cd curl-src
+          git submodule update --init --recursive
+        working-directory: .
+
+      - name: Configure and build curl (mingw64 + CMake)
+        shell: bash
+        run: |
+          set -e
+          cd curl-src
+          mkdir -p build && cd build
+          cmake .. \
+            -G "MSYS Makefiles" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/mingw64 \
+            -DOPENSSL_ROOT_DIR=/mingw64 \
+            -DOPENSSL_INCLUDE_DIR=/mingw64/include \
+            -DOPENSSL_CRYPTO_LIBRARY=/mingw64/lib/libcrypto.dll.a \
+            -DOPENSSL_SSL_LIBRARY=/mingw64/lib/libssl.dll.a \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCURL_DISABLE_LDAP=ON \
+            -DCURL_USE_OPENSSL=ON
+          make -j$(nproc)
+          make install
+
+      - name: Show built curl info
+        shell: bash
+        run: |
+          /mingw64/bin/curl -V
+          /mingw64/bin/curl -v https://drive.idol.qzz.io 2>&1 | sed -n '1,200p'
+
+      - name: Upload artifacts (curl binary)
+        uses: actions/upload-artifact@v4
+        with:
+          name: curl-windows-mingw64
+          path: /mingw64/bin/curl.exe
