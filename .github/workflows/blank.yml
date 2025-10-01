@@ -31,8 +31,9 @@ jobs:
           pacman_opts: --noconfirm
 
       - name: Add mingw64 to PATH
-        run: |
-          echo "::add-path::C:\msys64\mingw64\bin"
+        shell: bash
+        run: echo "C:/msys64/mingw64/bin" >> $GITHUB_PATH
+
       - name: Show environment
         shell: bash
         run: |
@@ -40,7 +41,6 @@ jobs:
           gcc --version
           cmake --version
 
-      # === build OpenSSL from source (required: >=3.5) ===
       - name: Download OpenSSL source
         shell: bash
         run: |
