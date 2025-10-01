@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          cd openssl-3.5.0
+          cd openssl-3.5.4
           # mingw64 平台配置，prefix 指向 /mingw64（MSYS2 下的 MinGW64 root）
           # 依据需要可加入其它 Configure 选项
           ./Configure mingw64 --prefix=/mingw64 --openssldir=/mingw64/ssl shared
